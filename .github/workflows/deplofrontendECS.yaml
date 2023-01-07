@@ -1,10 +1,12 @@
-name: Deploy to ECS
+name: Deploy frontend to ECS
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
 env:
   AWS_REGION: "eu-north-1"                   
-  ECR_REPOSITORY: "frontend"          
+  ECR_REPOSITORY: "frontend"   
+  ECS_CLUSTER: "weather-ecs-dev"
+  ECS_SERVICE: "frontend-svc"       
 
 jobs:
   PushtoECR:
@@ -45,3 +47,4 @@ jobs:
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG . -f frontend/Dockerfile
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG 
+        ecs deploy $ECS_CLUSTER $ECS_SERVICE --tag $IMAGE_TAG 
