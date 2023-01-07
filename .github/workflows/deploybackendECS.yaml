@@ -1,0 +1,47 @@
+name: Deploy to ECS
+on:
+  push:
+    branches: [ master ]
+env:
+  AWS_REGION: "eu-north-1"                   
+  ECR_REPOSITORY: "backend"          
+
+jobs:
+  PushtoECR:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install ECS Deploy tool cli
+      run: |
+        sudo pip install ecs-deploy -y
+      
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Check Repo and create if doesn't exist
+      run:  aws ecr describe-repositories --repository-names $ECR_REPOSITORY || aws ecr create-repository --repository-name $ECR_REPOSITORY
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Trim SHA
+      id: sha
+      run: echo "::set-output name=trim_SHA::$(git rev-parse --short HEAD)"
+    - name: Check outputs
+      run: echo ${{ steps.sha.outputs.trim_SHA }}
+
+    - name: Build Image and push to ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ steps.sha.outputs.trim_SHA }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG . -f backend/Dockerfile
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG 
