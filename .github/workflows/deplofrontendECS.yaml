@@ -9,7 +9,7 @@ env:
   ECS_SERVICE: "frontend-svc"       
 
 jobs:
-  PushtoECR:
+  deployFrontendECS:
     runs-on: ubuntu-latest
     steps:
     - name: Install ECS Deploy tool cli
@@ -48,4 +48,8 @@ jobs:
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG . 
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG 
-        ecs deploy $ECS_CLUSTER $ECS_SERVICE --tag $IMAGE_TAG 
+
+    - name: Update ECS Service
+      env:
+        IMAGE_TAG: ${{ steps.sha.outputs.trim_SHA }}
+      run: ecs deploy $ECS_CLUSTER $ECS_SERVICE --tag $IMAGE_TAG 
